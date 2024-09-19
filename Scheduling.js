@@ -62,9 +62,9 @@ function doCalculate(e) {
   const rowOfCellEdited = e.range.getRow();
 
     // Regular expression to match sheet names starting with a number prefix
-  const sheetNamePrefixRegex = /^\d+\./;
+  const SHEET_NAME_PREFIX_REGEX = /^\d+\./;
 
-  if (!sheetNamePrefixRegex.test(sheetName)) {
+  if (!SHEET_NAME_PREFIX_REGEX.test(sheetName)) {
     return;
   }
 

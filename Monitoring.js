@@ -26,16 +26,13 @@ function copyTasksReference() {
   // Start copying from row 1000 in the target sheet
   let targetRow = 1000;
 
-  // Regular expression to match sheet names starting with a number prefix
-  const sheetNamePrefixRegex = /^\d+\./;
-
   // Iterate through all sheets in the spreadsheet
   const sheets = ss.getSheets();
   sheets.forEach(sheet => {
     const sheetName = sheet.getName();
 
     // Check if the sheet name starts with a number prefix
-    if (sheetNamePrefixRegex.test(sheetName)) {
+    if (SHEET_NAME_PREFIX_REGEX.test(sheetName)) {
       // Get the data range of the current sheet
       const dataRange = sheet.getDataRange();
       const values = dataRange.getValues();
@@ -221,14 +218,14 @@ function setDataValidation() {
   }
 
     // Regular expression to match sheet names starting with a number prefix
-  const sheetNamePrefixRegex = /^\d+\./;
+  const SHEET_NAME_PREFIX_REGEX = /^\d+\./;
 
   // Iterate over all sheets in the spreadsheet
   sheets.forEach(sheet => {
     const sheetName = sheet.getName();
 
     // Check if the sheet name starts with a number prefix
-    if (sheetNamePrefixRegex.test(sheetName)) {
+    if (SHEET_NAME_PREFIX_REGEX.test(sheetName)) {
 
       // Get the last row with data in the sheet
       const lastRow = sheet.getLastRow();
@@ -258,12 +255,12 @@ function setConditionalFormatting() {
   const sheets = ss.getSheets();
 
   // Regular expression to match sheet names starting with a number prefix
-  const sheetNamePrefixRegex = /^\d+\./;
+  const SHEET_NAME_PREFIX_REGEX = /^\d+\./;
 
   sheets.forEach(sheet => {
     const sheetName = sheet.getName();
 
-    if (!sheetNamePrefixRegex.test(sheetName)) {
+    if (!SHEET_NAME_PREFIX_REGEX.test(sheetName)) {
       return;
     }
 

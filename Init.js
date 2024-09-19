@@ -19,6 +19,7 @@ function onOpen() {
   prepareMonitoringSheet();
   setDataValidation();
   setConditionalFormatting();
+  initializeSheetHeaders();
 }
 
 function importHolidays() {
