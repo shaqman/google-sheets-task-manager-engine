@@ -276,6 +276,9 @@ function setConditionalFormatting() {
     // Define the range in column G (column index 7), starting from row 6 to the last row
     const range = sheet.getRange(6, 7, numRows);
 
+    // Define the range in column D (column index 4), starting from row 6 to the last row
+    const rangeStatus = sheet.getRange(6, 4, numRows);
+
     // Get existing conditional format rules
     const rules = sheet.getConditionalFormatRules();
 
@@ -319,10 +322,49 @@ function setConditionalFormatting() {
       .setRanges([range])
       .build();
 
+    // Create the conditional formatting rule for status Done
+    const doneRule = SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo('Done')
+      .setBackground('#d9ead3')
+      .setRanges([rangeStatus])
+      .build();
+
+    // Create the conditional formatting rule for status Testing Notes
+    const testingNotesRule = SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo('Testing Notes')
+      .setBackground('#ea9999')
+      .setRanges([rangeStatus])
+      .build();
+
+    // Create the conditional formatting rule for status Ready to Implement
+    const readyToImplementRule = SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo('Ready to Implement')
+      .setBackground('#ffe599')
+      .setRanges([rangeStatus])
+      .build();
+    
+    // Create the conditional formatting rule for status Ready to Test
+    const readyToTestRule = SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo('Ready to Test')
+      .setBackground('#f1c232')
+      .setRanges([rangeStatus])
+      .build();
+    
+    // Create the conditional formatting rule for status In Progress
+    const inProgressRule = SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo('In Progress')
+      .setBackground('#f9cb9c')
+      .setRanges([rangeStatus])
+      .build();
 
     // Add the new rules to the list
     newRules.push(redRule);
     newRules.push(yellowRule);
+    newRules.push(doneRule);
+    newRules.push(testingNotesRule);
+    newRules.push(readyToImplementRule);
+    newRules.push(readyToTestRule);
+    newRules.push(inProgressRule);
 
     // Set the updated rules back to the sheet
     sheet.setConditionalFormatRules(newRules);
