@@ -6,17 +6,22 @@ function onOpen() {
   var ui = SpreadsheetApp.getUi();
   // Or DocumentApp, SlidesApp or FormApp.
   ui.createMenu('Peentar')
-      .addItem('Update Holiday Data', 'importHolidays')
-      .addItem('Update Labels', 'populateLabels')
+      .addSubMenu(
+        ui.createMenu('Setup')
+          .addItem('Update format', 'updateSheetFormat')
+          .addItem('Populate Holiday Data', 'importHolidays')
+          .addItem('Populate Labels', 'populateLabels')
+      )
       .addSeparator()
       .addItem('Update Monitoring', 'refreshMonitoring')
-      // .addSubMenu(ui.createMenu('Sub-menu')
-      //     .addItem('Second item', 'menuItem2'))
       .addToUi();
 
   defaultState(holidaySheetName);
   defaultState(labelSheetName);
   prepareMonitoringSheet();
+}
+
+function updateSheetFormat() {
   setDataValidation();
   setConditionalFormatting();
   initializeSheetHeaders();

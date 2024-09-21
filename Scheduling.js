@@ -17,7 +17,7 @@ function calculateSchedule() {
           var daysOffset = daysColumn - targetColumn;  // 2 (H to F)
 
           // Construct the formula using R1C1 notation with absolute reference to C3 (R3C3)
-          var formula = '=R3C3+IF(ISBLANK(R[0]C[' + daysOffset + ']),0,R[0]C[' + daysOffset + '])';
+          var formula = '=WORKDAY(R3C3, IF(ISBLANK(R[0]C[' + daysOffset + ']),0,R[0]C[' + daysOffset + ']), Harilibur)';
 
           // Set the formula into the target cell
           sheet.getRange(currentRow, targetColumn).setFormulaR1C1(formula);
@@ -28,11 +28,12 @@ function calculateSchedule() {
         indexDifference = (i - lastAssigneeIndex) * -1;
         // Set the formula in the cell, checking if R[0]C[2] is empty before using it
         sheet.getRange(i + 1, 5 + 1).setFormulaR1C1(
-          "=R[" + indexDifference + "]C[1] + IF(ISBLANK(R[0]C[2]), 0, R[0]C[2]) + 1"
+          "=WORKDAY(R[" + indexDifference + "]C[1], IF(ISBLANK(R[0]C[2]), 0, R[0]C[2]) + 1, Harilibur)"
         );
       }
 
-      sheet.getRange(i+1, 6+1).setFormulaR1C1("=WORKDAY(R[0]C[-1],R[0]C[-2],Harilibur)-1");
+      // Check if column L (index 9) has a value of 1
+      sheet.getRange(i+1, 6+1).setFormulaR1C1("=IF(R[0]C[5]=1, R[0]C[-1]+R[0]C[-2], WORKDAY(R[0]C[-1],R[0]C[-2],Harilibur)-1)");
 
       Logger.log('Number: ' + data[i][0] + ' Task: ' + data[i][1] + ' Last Index: ' + lastAssigneeIndex);
     }
@@ -61,14 +62,11 @@ function doCalculate(e) {
   const columnOfCellEdited = range.getColumn();//Get column number
   const rowOfCellEdited = e.range.getRow();
 
-    // Regular expression to match sheet names starting with a number prefix
-  const SHEET_NAME_PREFIX_REGEX = /^\d+\./;
-
   if (!SHEET_NAME_PREFIX_REGEX.test(sheetName)) {
     return;
   }
 
-  const monitoredColumns = [1, 3, 5, 8, 10]; // Columns to be monitored
+  const monitoredColumns = [1, 3, 5, 8, 10, 12]; // Columns to be monitored
 
   // Check if the edited column is in the monitored columns array
   if (monitoredColumns.includes(columnOfCellEdited)) {

@@ -5,12 +5,12 @@ function prepareMonitoringSheet() {
   protectSheet(monitoringSheetName);
   moveSheetToIndex(monitoringSheetName, 0)
   setHeaders();
+  createPivotTableCr();
+  createPivotTablePic();
 }
 
 function refreshMonitoring() {
   copyTasksReference();
-  createPivotTableCr();
-  createPivotTablePic();
 }
 
 function copyTasksReference() {
@@ -26,6 +26,12 @@ function copyTasksReference() {
   // Start copying from row 1000 in the target sheet
   let targetRow = 1000;
 
+  // Clear existing data from row 1000 to the last row
+  if (targetSheet.getLastRow() >= 1000) {
+    const rangeToClear = targetSheet.getRange(1000, 1, targetSheet.getLastRow() - 999, targetSheet.getLastColumn());
+    rangeToClear.clearContent();
+  }
+
   // Iterate through all sheets in the spreadsheet
   const sheets = ss.getSheets();
   sheets.forEach(sheet => {
@@ -38,29 +44,33 @@ function copyTasksReference() {
       const values = dataRange.getValues();
       
       // Get the value from cell C2
-      const valueFromC2 = sheet.getRange('C2').getValue();
+      const currentCrName = sheet.getRange('C2').getValue();
 
       // Iterate through each row in the sheet
       values.forEach(row => {
         // Check if the first cell in the row is a valid number
         if (!isNaN(row[0]) && row[0] !== '') {
           // Get the status from column D (index 3)
-          let status = row[3];
-          if (status) {
-            status = status.toString().trim().toLowerCase();
-          } else {
-            status = '';
+          let status = row[3].toString().trim();
+          // Print each column value for debugging
+          for (let i = 0; i < row.length && i < 14; i++) { // Up to column N (index 13)
+            Logger.log(`Column ${String.fromCharCode(65 + i)}: ${row[i]}`);
+          }
+          if(status === "") return;
+          
+          // Define an array of statuses to exclude
+          const excludedStatuses = ['done', 'backlog', 'ready to implement', 'ready to test']; // Add more statuses to exclude as needed
+
+          // Check if the status is not in the excludedStatuses array
+          if (!excludedStatuses.includes(status.toLowerCase())) {
+              // Append the value from C2 to the row
+              row.push(currentCrName);
+              
+              // Copy the row to the target sheet
+              targetSheet.getRange(targetRow, 1, 1, row.length).setValues([row]);
+              targetRow++;
           }
 
-          // Check if status is not 'Done' or 'Backlog'
-          if (status !== 'done' && status !== 'backlog') {
-            // Append the value from C2 to the row
-            row.push(valueFromC2);
-            
-            // Copy the row to the target sheet
-            targetSheet.getRange(targetRow, 1, 1, row.length).setValues([row]);
-            targetRow++;
-          }
         }
       });
     }
@@ -81,16 +91,11 @@ function setHeaders() {
   if (!targetSheet) {
     targetSheet = ss.insertSheet(monitoringSheetName);
   }
-  
-  // Define the headers
-  const headers = [
-    'No', 'Task', 'PIC', 'Status', 'Duration', 
-    'Start Date', 'End Date', 'Skip', 
-    'Skip Reason', 'Parallel', 'Issue Link', 'CR'
-  ];
 
+  let extendedHeaders = [...COLUMN_HEADERS, 'CR'];
+  
   // Set the headers in row 999
-  targetSheet.getRange(999, 1, 1, headers.length).setValues([headers]);
+  targetSheet.getRange(999, 1, 1, extendedHeaders.length).setValues([extendedHeaders]);
 
   Logger.log('Headers have been set on row 999 in the sheet: ' + monitoringSheetName);
 }
@@ -111,17 +116,13 @@ function createPivotTableCr() {
     }
   });
 
-
-  // Define the data range starting from row 999 to the last row and the last column
-  const lastRow = sheet.getLastRow();
-  const lastColumn = sheet.getLastColumn();
-  const dataRange = sheet.getRange(999, 1, lastRow - 998, lastColumn);
+  const dataRange = sheet.getRange(999, 1, DATA_END_ROW, sheet.getLastColumn());
 
   // Create the pivot table
   const pivotTable = pivotRange.createPivotTable(dataRange);
 
   // Group by "CR" (12th column), "PIC" (3rd column), and "Task" (2nd column)
-  pivotTable.addRowGroup(12); // "CR" is in the 12th column (1-based index 12)
+  pivotTable.addRowGroup(sheet.getLastColumn()); // "CR" is in the 12th column (1-based index 12)
   pivotTable.addRowGroup(3);  // "PIC" is in the 3rd column (1-based index 3)
   pivotTable.addRowGroup(2);  // "Task" is in the 2nd column (1-based index 2)
 
@@ -168,16 +169,14 @@ function createPivotTablePic() {
 
 
   // Define the data range starting from row 999 to the last row and the last column
-  const lastRow = sheet.getLastRow();
-  const lastColumn = sheet.getLastColumn();
-  const dataRange = sheet.getRange(999, 1, lastRow - 998, lastColumn);
+  const dataRange = sheet.getRange(999, 1, DATA_END_ROW, sheet.getLastColumn());
 
   // Create the pivot table
   const pivotTable = pivotRange.createPivotTable(dataRange);
 
   // Group by "CR" (12th column), "PIC" (3rd column), and "Task" (2nd column)
   pivotTable.addRowGroup(3);  // "PIC" is in the 3rd column (1-based index 3)
-  pivotTable.addRowGroup(12); // "CR" is in the 12th column (1-based index 12)
+  pivotTable.addRowGroup(sheet.getLastColumn()); // "CR" is in the 12th column (1-based index 12)
   pivotTable.addRowGroup(2);  // "Task" is in the 2nd column (1-based index 2)
 
   // Add values to display in the pivot table and set custom display names
@@ -217,9 +216,6 @@ function setDataValidation() {
     return;
   }
 
-    // Regular expression to match sheet names starting with a number prefix
-  const SHEET_NAME_PREFIX_REGEX = /^\d+\./;
-
   // Iterate over all sheets in the spreadsheet
   sheets.forEach(sheet => {
     const sheetName = sheet.getName();
@@ -254,9 +250,6 @@ function setConditionalFormatting() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheets = ss.getSheets();
 
-  // Regular expression to match sheet names starting with a number prefix
-  const SHEET_NAME_PREFIX_REGEX = /^\d+\./;
-
   sheets.forEach(sheet => {
     const sheetName = sheet.getName();
 
@@ -286,89 +279,85 @@ function setConditionalFormatting() {
     const newRules = rules.filter(rule => {
       const ruleRanges = rule.getRanges();
       // Check if the rule applies to column G
-      const appliesToColumnG = ruleRanges.some(ruleRange => {
+      const appliesToColumnGorD = ruleRanges.some(ruleRange => {
         const ruleStartCol = ruleRange.getColumn();
         const ruleEndCol = ruleRange.getLastColumn();
-        // Return true if the rule applies to column G
-        return ruleStartCol <= 7 && ruleEndCol >= 7;
+        // Return true if the rule applies to column G or column D
+        return (ruleStartCol <= 7 && ruleEndCol >= 7) || (ruleStartCol <= 4 && ruleEndCol >= 4);
       });
       // Keep the rule only if it does not apply to column G
-      return !appliesToColumnG;
+      return !appliesToColumnGorD;
+    });
+    
+    // Create and add the date-based rules
+    TASKS_DATE_STATUS_RULES.forEach(({ formula, color }) => {
+      const rule = SpreadsheetApp.newConditionalFormatRule()
+        .whenFormulaSatisfied(formula)
+        .setBackground(color)
+        .setRanges([range])
+        .build();
+      newRules.push(rule);
     });
 
-    // Define the statuses to exclude
-    const statusesToExclude = ['Done', 'Ready to Merge', 'Ready for Deployement', 'Ready to Test', 'Ready to Implement']; // Add more statuses as needed
-
-    // Convert the array of statuses to a string that can be used in the formula
-    const statusesList = statusesToExclude.map(status => `"${status}"`).join(",");
-
-    // Build the formula using MATCH and ISNA
-    const formula = `=AND(ISNA(MATCH($D6, {${statusesList}}, 0)), $G6<TODAY(), NOT(ISBLANK($G6)))`;
-
-    // Create the conditional formatting rule for red background (overdue dates)
-    const redRule = SpreadsheetApp.newConditionalFormatRule()
-      .whenFormulaSatisfied(formula)
-      .setBackground('#FF0000') // Red color
-      .setRanges([range])
-      .build();
-
-    // Modify the formula for yellow background (dates within next 3 days)
-    const formulaYellow = `=AND(ISNA(MATCH($D6, {${statusesList}}, 0)), $G6>=TODAY(), $G6<=TODAY()+3, NOT(ISBLANK($G6)))`;
-
-    // Create the conditional formatting rule for yellow background
-    const yellowRule = SpreadsheetApp.newConditionalFormatRule()
-      .whenFormulaSatisfied(formulaYellow)
-      .setBackground('#FFFF00') // Yellow color
-      .setRanges([range])
-      .build();
-
-    // Create the conditional formatting rule for status Done
-    const doneRule = SpreadsheetApp.newConditionalFormatRule()
-      .whenTextEqualTo('Done')
-      .setBackground('#d9ead3')
-      .setRanges([rangeStatus])
-      .build();
-
-    // Create the conditional formatting rule for status Testing Notes
-    const testingNotesRule = SpreadsheetApp.newConditionalFormatRule()
-      .whenTextEqualTo('Testing Notes')
-      .setBackground('#ea9999')
-      .setRanges([rangeStatus])
-      .build();
-
-    // Create the conditional formatting rule for status Ready to Implement
-    const readyToImplementRule = SpreadsheetApp.newConditionalFormatRule()
-      .whenTextEqualTo('Ready to Implement')
-      .setBackground('#ffe599')
-      .setRanges([rangeStatus])
-      .build();
-    
-    // Create the conditional formatting rule for status Ready to Test
-    const readyToTestRule = SpreadsheetApp.newConditionalFormatRule()
-      .whenTextEqualTo('Ready to Test')
-      .setBackground('#f1c232')
-      .setRanges([rangeStatus])
-      .build();
-    
-    // Create the conditional formatting rule for status In Progress
-    const inProgressRule = SpreadsheetApp.newConditionalFormatRule()
-      .whenTextEqualTo('In Progress')
-      .setBackground('#f9cb9c')
-      .setRanges([rangeStatus])
-      .build();
-
-    // Add the new rules to the list
-    newRules.push(redRule);
-    newRules.push(yellowRule);
-    newRules.push(doneRule);
-    newRules.push(testingNotesRule);
-    newRules.push(readyToImplementRule);
-    newRules.push(readyToTestRule);
-    newRules.push(inProgressRule);
+    // Create and add the status-based rules
+    STATUS_RULES.forEach(({ status, color }) => {
+      const rule = SpreadsheetApp.newConditionalFormatRule()
+        .whenTextEqualTo(status)
+        .setBackground(color)
+        .setRanges([rangeStatus])
+        .build();
+      newRules.push(rule);
+    });
 
     // Set the updated rules back to the sheet
     sheet.setConditionalFormatRules(newRules);
   });
+
+  // Apply STATUS_RULES to Resource Overview sheet, columns F and M until row 900
+  const resourceOverviewSheet = ss.getSheetByName(monitoringSheetName);
+
+  if (resourceOverviewSheet) {
+    // Get existing conditional format rules
+    let rules = resourceOverviewSheet.getConditionalFormatRules();
+
+    // Remove existing rules that apply to columns G and M
+    rules = rules.filter(rule => {
+      const ruleRanges = rule.getRanges();
+      // Check if the rule applies to column G or M
+      const appliesToColumnGorM = ruleRanges.some(ruleRange => {
+        const ruleStartCol = ruleRange.getColumn();
+        const ruleEndCol = ruleRange.getLastColumn();
+        // Return true if the rule applies to column G or column M
+        return (ruleStartCol <= 6 && ruleEndCol >= 6) || (ruleStartCol <= 13 && ruleEndCol >= 13);
+      });
+      // Keep the rule only if it does not apply to column G or M
+      return !appliesToColumnGorM;
+    });
+
+    const rangeFStatus = resourceOverviewSheet.getRange('F2:F900');
+    const rangeMStatus = resourceOverviewSheet.getRange('M2:M900');
+
+    RESOURCE_DATE_RULES.forEach(({ formula, color }) => {
+      const ruleF = SpreadsheetApp.newConditionalFormatRule()
+        .whenFormulaSatisfied(formula.replace(/\$G6/g, '$F2'))
+        .setBackground(color)
+        .setRanges([rangeFStatus])
+        .build();
+      rules.push(ruleF);
+
+      const ruleM = SpreadsheetApp.newConditionalFormatRule()
+        .whenFormulaSatisfied(formula.replace(/\$G6/g, '$M2'))
+        .setBackground(color)
+        .setRanges([rangeMStatus])
+        .build();
+      rules.push(ruleM);
+    });
+
+    resourceOverviewSheet.setConditionalFormatRules(rules);
+    Logger.log('Conditional formatting has been set for columns F and M in the Resource Overview sheet.');
+  } else {
+    Logger.log('Resource Overview sheet not found.');
+  }
 
   Logger.log('Conditional formatting has been set for column G in all sheets.');
 }
